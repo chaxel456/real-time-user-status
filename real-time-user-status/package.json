@@ -1,0 +1,27 @@
+{
+  "name": "real-time-user-status",
+  "version": "1.0.0",
+  "description": "Simple Node.js + Express + Socket.IO service that tracks user online/offline status in real-time.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "npx nodemon server.js"
+  },
+  "keywords": [
+    "socket.io",
+    "express",
+    "real-time",
+    "status",
+    "users"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}

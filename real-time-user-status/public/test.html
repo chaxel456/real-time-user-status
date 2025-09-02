@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Real-Time User Status — Test Client</title>
+    <style>
+      body { font-family: system-ui, Arial, sans-serif; margin: 2rem; }
+      .row { display: flex; gap: .5rem; align-items: center; margin-bottom: .75rem; }
+      .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: .5rem; }
+      .online { background: #22c55e; }  /* green */
+      .offline { background: #9ca3af; } /* gray  */
+      ul { list-style: none; padding-left: 0; }
+      li { padding: .35rem .5rem; border: 1px solid #e5e7eb; border-radius: .5rem; margin-bottom: .35rem; display: flex; align-items: center; justify-content: space-between; }
+      code { background: #f3f4f6; padding: .1rem .3rem; border-radius: .25rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Real-Time User Status — Test Client</h1>
+    <p>Use this page to simulate users connecting/disconnecting and see the statuses update in real-time.</p>
+
+    <div class="row">
+      <label>User ID:</label>
+      <input id="userId" placeholder="e.g. 1" value="1" />
+      <label>Name (optional):</label>
+      <input id="name" placeholder="e.g. John Doe" />
+      <button id="connectBtn">Connect</button>
+      <button id="disconnectBtn" disabled>Disconnect</button>
+    </div>
+
+    <h3>Users</h3>
+    <ul id="users"></ul>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      let socket = null;
+      const usersEl = document.getElementById("users");
+      const connectBtn = document.getElementById("connectBtn");
+      const disconnectBtn = document.getElementById("disconnectBtn");
+      const userIdEl = document.getElementById("userId");
+      const nameEl = document.getElementById("name");
+
+      function renderUsers(list) {
+        usersEl.innerHTML = "";
+        list.forEach(u => {
+          const li = document.createElement("li");
+          const left = document.createElement("div");
+          const right = document.createElement("div");
+
+          const dot = document.createElement("span");
+          dot.className = "dot " + (u.status === "online" ? "online" : "offline");
+          left.appendChild(dot);
+          left.appendChild(document.createTextNode(`${u.name} (id: ${u.id})`));
+
+          right.innerHTML = `<code>${u.status}</code>`;
+
+          li.appendChild(left);
+          li.appendChild(right);
+          usersEl.appendChild(li);
+        });
+      }
+
+      async function refreshUsers() {
+        const res = await fetch("/users");
+        const list = await res.json();
+        renderUsers(list);
+      }
+
+      connectBtn.onclick = () => {
+        if (socket && socket.connected) return;
+
+        const userId = userIdEl.value.trim();
+        const name = nameEl.value.trim();
+
+        socket = io("/", { auth: { userId, name: name || undefined } });
+
+        socket.on("connect", () => {
+          connectBtn.disabled = true;
+          disconnectBtn.disabled = false;
+          console.log("Connected as", userId);
+        });
+
+        socket.on("users", renderUsers);
+        socket.on("statusUpdate", async () => {
+          await refreshUsers();
+        });
+        socket.on("userUpdated", async () => {
+          await refreshUsers();
+        });
+        socket.on("disconnect", () => {
+          connectBtn.disabled = false;
+          disconnectBtn.disabled = true;
+        });
+        socket.on("errorMessage", (msg) => {
+          alert(msg);
+        });
+      };
+
+      disconnectBtn.onclick = () => {
+        if (socket) {
+          socket.disconnect();
+          socket = null;
+        }
+      };
+
+      // Initial load
+      refreshUsers();
+    </script>
+  </body>
+</html>
